@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Topbar from "@/components/Topbar";
 import { Button, Input } from "@/components/ui";
-import { Contractor, Payout, listContractors, listPayouts, savePayouts } from "@/lib/store";
+import { Contractor, Payout, listContractors, listPayouts, savePayouts, seedDemoData } from "@/lib/store";
 import { Table, Th, Td } from "@/components/Table";
 
 async function refreshRailStatus(railPaymentId: string) {
@@ -13,13 +13,31 @@ async function refreshRailStatus(railPaymentId: string) {
   return json;
 }
 
+function StatusBadge({ status }: { status: string | undefined }) {
+  const styles: Record<string, string> = {
+    submitted: "bg-blue-50 text-blue-700 border-blue-100",
+    processing: "bg-amber-50 text-amber-700 border-amber-100",
+    completed: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    failed: "bg-red-50 text-red-700 border-red-100"
+  };
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs capitalize ${styles[status || ""] || "bg-gray-50 text-gray-700 border-gray-200"}`}>
+      {status || "draft"}
+    </span>
+  );
+}
+
 export default function PayoutsPage() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [query, setQuery] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  useEffect(() => { setPayouts(listPayouts()); setContractors(listContractors()); }, []);
+  useEffect(() => {
+    seedDemoData();
+    setPayouts(listPayouts());
+    setContractors(listContractors());
+  }, []);
 
   const contractorById = useMemo(() => {
     const m = new Map<string, Contractor>();
@@ -79,7 +97,7 @@ export default function PayoutsPage() {
                   <Td>{new Date(p.createdAt).toLocaleString()}</Td>
                   <Td className="font-medium">{c?.nickname || "Unknown"}</Td>
                   <Td>{p.amount} {p.currency}</Td>
-                  <Td>{p.status}</Td>
+                  <Td><StatusBadge status={p.status} /></Td>
                   <Td className="font-mono text-xs">{p.railPaymentId || "-"}</Td>
                   <Td className="text-right">
                     {p.railPaymentId ? (

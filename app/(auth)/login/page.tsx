@@ -22,25 +22,32 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <form onSubmit={onSubmit} className="w-full max-w-sm rounded-2xl border bg-white p-6 shadow-sm">
-        <div className="text-center">
-          <div className="text-2xl font-bold">{appName()}</div>
-          <div className="mt-1 text-sm text-gray-600">{isSupabaseConfigured() ? "Sign in" : "Demo mode (no Supabase keys set)"}</div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 px-4">
+      <form
+        onSubmit={onSubmit}
+        className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-lg space-y-6"
+      >
+        <div className="text-center space-y-1">
+          <div className="text-2xl font-bold tracking-tight">{appName()}</div>
+          <div className="text-sm text-gray-600">
+            {isSupabaseConfigured() ? "Sign in to continue" : "Demo mode (no Supabase keys set)"}
+          </div>
         </div>
 
-        <div className="mt-6 space-y-3">
-          <Input name="email" type="email" placeholder="Email" required />
-          <Input name="password" type="password" placeholder="Password" required />
+        <div className="space-y-3">
+          <Input name="email" type="email" placeholder="Email" required autoComplete="email" />
+          <Input name="password" type="password" placeholder="Password" required autoComplete="current-password" />
         </div>
 
-        {error && <div className="mt-3 text-sm text-red-600">{error}</div>}
+        {error && <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md p-2">{error}</div>}
 
-        <div className="mt-5">
-          <Button className="w-full" type="submit" disabled={loading}>{loading ? "Signing in…" : "Sign In"}</Button>
+        <Button className="w-full" type="submit" disabled={loading}>
+          {loading ? "Signing in…" : "Sign in"}
+        </Button>
+
+        <div className="text-xs text-gray-500 leading-5 text-center">
+          Next: add contractors → send payment → track payout status. Demo data is stored locally in your browser.
         </div>
-
-        <div className="mt-4 text-xs text-gray-500">Next: add contractors → send payment → track payout status.</div>
       </form>
     </div>
   );

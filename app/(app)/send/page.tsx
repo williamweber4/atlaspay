@@ -88,6 +88,7 @@ export default function SendPaymentPage() {
               <Select value={contractorId} onChange={(e) => setContractorId(e.target.value)}>
                 {contractors.map(c => <option key={c.id} value={c.id}>{c.nickname} ({c.country}) • {c.payoutMethod}</option>)}
               </Select>
+              {contractors.length === 0 && <div className="mt-1 text-xs text-gray-500">Add a contractor first.</div>}
             </div>
 
             <div>

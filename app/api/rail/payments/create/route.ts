@@ -1,51 +1,47 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { railFetch } from "@/lib/rail";
 
 export const runtime = "nodejs";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { contractor, amount, currency, memo } = body || {};
 
-    if (!body?.contractor?.id) return NextResponse.json({ error: "contractor is required" }, { status: 400 });
-    if (!body?.amount || Number(body.amount) <= 0) return NextResponse.json({ error: "amount must be greater than zero" }, { status: 400 });
-
-    const contractor = body.contractor;
-    const payoutMethod = contractor.payoutMethod === "USDC" ? "CRYPTO" : "BANK";
-    const payoutDetails = payoutMethod === "CRYPTO"
-      ? { method: "CRYPTO", asset: body?.currency || "USDC", wallet_address: contractor.walletAddress }
-      : { method: "BANK_TRANSFER", bank_name: contractor.bankName, account_last4: contractor.bankAccountLast4, country: contractor.country };
-
-    if (payoutMethod === "CRYPTO" && !payoutDetails.wallet_address) {
-      return NextResponse.json({ error: "wallet_address is required for USDC payouts" }, { status: 400 });
+    if (!contractor || typeof amount === "undefined" || !currency) {
+      return NextResponse.json({ error: "Missing contractor, amount, or currency." }, { status: 400 });
     }
 
-    if (payoutMethod === "BANK" && !(contractor.bankName && contractor.bankAccountLast4)) {
-      return NextResponse.json({ error: "bankName and bankAccountLast4 required for bank payouts" }, { status: 400 });
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return NextResponse.json({ error: "Amount must be a positive number." }, { status: 400 });
     }
 
     const payload = {
-      reference: body?.memo || "AtlasPay payout",
-      amount: body?.amount,
-      currency: body?.currency,
+      amount: numericAmount,
+      currency,
+      memo: memo || `Payment to ${contractor?.nickname || contractor?.legalName || "contractor"}`,
       counterparty: {
-        legal_name: contractor.legalName,
-        country: contractor.country,
-        alias: contractor.nickname
-      },
-      payout: payoutDetails,
-      metadata: {
-        contractor_nickname: body?.contractor?.nickname,
-        contractor_country: body?.contractor?.country,
-        payout_method: body?.contractor?.payoutMethod
+        name: contractor?.legalName || contractor?.nickname,
+        country: contractor?.country,
+        payout_method: contractor?.payoutMethod,
+        wallet_address: contractor?.walletAddress,
+        bank: contractor?.payoutMethod === "Bank" ? {
+          name: contractor?.bankName,
+          account_last4: contractor?.bankAccountLast4
+        } : undefined
       }
     };
 
     const res = await railFetch("/v1/payments", { method: "POST", body: JSON.stringify(payload) });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) return NextResponse.json({ error: json?.error || json || "Rail create payment failed" }, { status: res.status });
+
+    if (!res.ok) {
+      return NextResponse.json({ error: json?.error || "Rail request failed", details: json }, { status: res.status });
+    }
+
     return NextResponse.json(json);
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Server error" }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || "Unexpected error" }, { status: 500 });
   }
 }
