@@ -19,6 +19,8 @@ export default function SendPaymentPage() {
   const [currency, setCurrency] = useState<"USD" | "USDC">("USDC");
   const [memo, setMemo] = useState("Invoice #");
   const [status, setStatus] = useState<string | null>(null);
+  const [railConfig, setRailConfig] = useState<any>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -26,6 +28,11 @@ export default function SendPaymentPage() {
     const list = listContractors();
     setContractors(list);
     if (list[0]) setContractorId(list[0].id);
+
+    fetch("/api/rail/config")
+      .then(res => res.json())
+      .then(setRailConfig)
+      .catch(() => setConfigError("Unable to load Rail config"));
   }, []);
 
   const selected = useMemo(() => contractors.find(c => c.id === contractorId) || null, [contractors, contractorId]);
@@ -34,6 +41,10 @@ export default function SendPaymentPage() {
     if (!selected) return;
     const amt = Number(amount);
     if (!Number.isFinite(amt) || amt <= 0) return alert("Enter a valid amount.");
+
+    if (railConfig && !railConfig.mock && !railConfig.credentialsPresent) {
+      return alert("Rail credentials are missing. Set RAIL_CLIENT_ID/RAIL_CLIENT_SECRET or enable RAIL_MOCK=true.");
+    }
 
     setLoading(true);
     setStatus(null);
@@ -59,6 +70,18 @@ export default function SendPaymentPage() {
       <Topbar title="Send Payment" />
       <main className="p-6 space-y-6">
         <Card title="Create a payout">
+          <div className="rounded-lg border bg-gray-50 p-3 text-sm text-gray-700">
+            <div className="font-medium">Rail connectivity</div>
+            {railConfig ? (
+              <ul className="mt-1 list-disc pl-4 space-y-1 text-sm">
+                <li>Environment: <b>{railConfig.env}</b> {railConfig.mock && <span className="text-amber-600">(mock mode)</span>}</li>
+                <li>API base: {railConfig.apiBase}</li>
+                <li>Scopes: {railConfig.scopes}</li>
+                <li>Credentials: {railConfig.credentialsPresent ? "present" : "missing"}</li>
+              </ul>
+            ) : <div className="text-red-700">{configError || "Loading Rail config…"}</div>}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <div className="text-xs text-gray-600 mb-1">Contractor</div>
